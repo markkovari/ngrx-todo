@@ -1,0 +1,11 @@
+api:
+  image: ngrx-todo-api
+  tag: latest
+  port: 3000
+  replicas: 1
+
+app:
+  image: ngrx-todo-app
+  tag: latest
+  port: 80
+  replicas: 1

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: ngrx-todo
+description: NgRx Todo App — API + Frontend
+version: 0.1.0
+type: application
