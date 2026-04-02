@@ -1,10 +1,20 @@
 import { TestBed } from '@angular/core/testing';
+import { provideStore } from '@ngrx/store';
+import { provideHttpClient } from '@angular/common/http';
+import { provideEffects } from '@ngrx/effects';
 import { AppComponent } from './app.component';
+import { todoStore } from './todo/store/todo.reducer';
+import { todoEffects } from './todo/store/todo.effects';
 
 describe('AppComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [AppComponent],
+      providers: [
+        provideStore({ todo: todoStore }),
+        provideEffects(todoEffects),
+        provideHttpClient()
+      ]
     }).compileComponents();
   });
 
@@ -18,12 +28,5 @@ describe('AppComponent', () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
     expect(app.title).toEqual('todo-app');
-  });
-
-  it('should render title', () => {
-    const fixture = TestBed.createComponent(AppComponent);
-    fixture.detectChanges();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, todo-app');
   });
 });

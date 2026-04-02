@@ -30,7 +30,7 @@ app.get("/todos/:id", (req: Request, res: Response) => {
   if (todo) {
     res.send(todo);
   } else {
-    res.sendStatus(404).send({ message: "Todo not found" });
+    res.status(404).send({ message: "Todo not found" });
   }
 });
 
@@ -49,7 +49,7 @@ app.patch("/todos/:id/toggle", (req: Request, res: Response) => {
     todo.done = !todo.done;
     res.send({ id: todo.id });
   } else {
-    res.sendStatus(404).send({ message: "Todo not found" });
+    res.status(404).send({ message: "Todo not found" });
   }
 });
 
@@ -61,7 +61,7 @@ app.delete("/todos/:id", (req: Request, res: Response) => {
     res.statusCode = 204;
     res.send({ id });
   } else {
-    res.sendStatus(404).send({ message: "Todo not found" });
+    res.status(404).send({ message: "Todo not found" });
   }
 });
 
