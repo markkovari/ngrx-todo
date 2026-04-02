@@ -1,0 +1,49 @@
+name: K8s E2E Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'chart/**'
+      - 'todo-api/**'
+      - 'todo-app/**'
+      - 'e2e/**'
+      - 'scripts/k8s-e2e.sh'
+  workflow_dispatch:
+
+jobs:
+  k8s-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright browsers
+        working-directory: e2e
+        run: |
+          npm install
+          npx playwright install chromium --with-deps
+
+      - name: Create Kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: todo-e2e
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+
+      - name: Build and load Docker images
+        run: |
+          docker build -t todo-api:latest ./todo-api
+          docker build -t todo-app:latest ./todo-app
+          kind load docker-image todo-api:latest --name todo-e2e
+          kind load docker-image todo-app:latest --name todo-e2e
+
+      - name: Run K8s E2E tests
+        run: ./scripts/k8s-e2e.sh
+        env:
+          FRONTEND_PORT: "8082"

@@ -1,0 +1,12 @@
+{
+  "default": {
+    "formatOptions": {
+      "snippetInterface": "async-await"
+    },
+    "dryRun": false,
+    "paths": ["features/k8s/"],
+    "require": ["features/k8s/**/*.steps.ts"],
+    "requireModule": ["ts-node/register"],
+    "format": ["progress"]
+  }
+}

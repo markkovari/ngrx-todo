@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ .Release.Name }}-test-api
+  labels:
+    app: {{ .Release.Name }}-test
+    {{- include "todo-app.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: test-api
+      image: curlimages/curl:latest
+      command:
+        - /bin/sh
+        - -c
+        - |
+          set -e
+          echo "=== Helm Test: Todo API Verification ==="
+
+          API_URL="http://{{ .Release.Name }}-api:{{ .Values.api.service.port }}"
+
+          echo "1. Testing GET /todos (empty list)..."
+          RESPONSE=$(curl -sf "$API_URL/todos")
+          echo "   Response: $RESPONSE"
+          if [ "$RESPONSE" != "[]" ]; then
+            echo "   FAIL: Expected empty array"
+            exit 1
+          fi
+          echo "   PASS"
+
+          echo "2. Testing POST /todos (create todo)..."
+          RESPONSE=$(curl -sf -X POST -H "Content-Type: application/json" \
+            -d '{"name":"helm-test-todo"}' "$API_URL/todos")
+          echo "   Response: $RESPONSE"
+          TODO_ID=$(echo "$RESPONSE" | sed 's/.*"id":\([0-9]*\).*/\1/')
+          if [ -z "$TODO_ID" ]; then
+            echo "   FAIL: Could not extract todo ID"
+            exit 1
+          fi
+          echo "   PASS (id=$TODO_ID)"
+
+          echo "3. Testing GET /todos (non-empty list)..."
+          RESPONSE=$(curl -sf "$API_URL/todos")
+          echo "   Response: $RESPONSE"
+          echo "$RESPONSE" | grep -q "helm-test-todo" || { echo "   FAIL: Todo not found"; exit 1; }
+          echo "   PASS"
+
+          echo "4. Testing PATCH /todos/$TODO_ID/toggle..."
+          RESPONSE=$(curl -sf -X PATCH "$API_URL/todos/$TODO_ID/toggle")
+          echo "   Response: $RESPONSE"
+          echo "   PASS"
+
+          echo "5. Testing DELETE /todos/$TODO_ID..."
+          RESPONSE=$(curl -sf -X DELETE "$API_URL/todos/$TODO_ID")
+          echo "   Response: $RESPONSE"
+          echo "   PASS"
+
+          echo "6. Verifying deletion..."
+          RESPONSE=$(curl -sf "$API_URL/todos")
+          echo "   Response: $RESPONSE"
+          if [ "$RESPONSE" != "[]" ]; then
+            echo "   FAIL: Expected empty array after delete"
+            exit 1
+          fi
+          echo "   PASS"
+
+          echo "=== All API tests passed ==="
