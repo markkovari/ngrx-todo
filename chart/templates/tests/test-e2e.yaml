@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "todo-app.fullname" . }}-e2e-test
+  labels:
+    {{- include "todo-app.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  restartPolicy: Never
+  containers:
+    - name: e2e-test
+      image: "{{ .Values.e2e.image.repository }}:{{ .Values.e2e.image.tag }}"
+      command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          echo "Waiting for frontend to be ready..."
+          for i in $(seq 1 30); do
+            if curl -sf http://{{ include "todo-app.fullname" . }}-frontend:{{ .Values.frontend.service.port }}/ > /dev/null 2>&1; then
+              echo "Frontend is ready."
+              break
+            fi
+            echo "Attempt $i/30 - waiting..."
+            sleep 2
+          done
+
+          echo "Waiting for API to be ready..."
+          for i in $(seq 1 30); do
+            if curl -sf http://{{ include "todo-app.fullname" . }}-api:{{ .Values.api.service.port }}/todos > /dev/null 2>&1; then
+              echo "API is ready."
+              break
+            fi
+            echo "Attempt $i/30 - waiting..."
+            sleep 2
+          done
+
+          echo "Running smoke test: create and retrieve a todo..."
+
+          # Create a todo
+          RESPONSE=$(curl -sf -X POST \
+            -H "Content-Type: application/json" \
+            -d '{"name": "helm-test-todo"}' \
+            http://{{ include "todo-app.fullname" . }}-api:{{ .Values.api.service.port }}/todos)
+          echo "Created todo: $RESPONSE"
+
+          # Verify the todo exists
+          TODOS=$(curl -sf http://{{ include "todo-app.fullname" . }}-api:{{ .Values.api.service.port }}/todos)
+          echo "All todos: $TODOS"
+
+          if echo "$TODOS" | grep -q "helm-test-todo"; then
+            echo "PASS: Todo was created and retrieved successfully."
+          else
+            echo "FAIL: Todo not found in response."
+            exit 1
+          fi
+
+          # Verify frontend serves HTML
+          FRONTEND_BODY=$(curl -sf http://{{ include "todo-app.fullname" . }}-frontend:{{ .Values.frontend.service.port }}/)
+          if echo "$FRONTEND_BODY" | grep -qi "html"; then
+            echo "PASS: Frontend serves HTML content."
+          else
+            echo "FAIL: Frontend did not return HTML."
+            exit 1
+          fi
+
+          # Verify frontend proxies API requests
+          PROXY_RESPONSE=$(curl -sf http://{{ include "todo-app.fullname" . }}-frontend:{{ .Values.frontend.service.port }}/todos)
+          if echo "$PROXY_RESPONSE" | grep -q "helm-test-todo"; then
+            echo "PASS: Frontend nginx proxy routes /todos to API."
+          else
+            echo "FAIL: Frontend proxy did not return API data."
+            exit 1
+          fi
+
+          echo "All e2e tests passed!"

@@ -1,0 +1,39 @@
+api:
+  replicaCount: 1
+  image:
+    repository: todo-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 3000
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+frontend:
+  replicaCount: 1
+  image:
+    repository: todo-app
+    tag: latest
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+
+e2e:
+  image:
+    repository: mcr.microsoft.com/playwright
+    tag: v1.42.0-jammy
+  baseUrl: "http://todo-app-frontend:80"

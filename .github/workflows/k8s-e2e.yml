@@ -1,0 +1,41 @@
+name: K8s E2E Tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "chart/**"
+      - "todo-api/**"
+      - "todo-app/**"
+      - "e2e/**"
+      - "scripts/k8s-e2e.sh"
+  workflow_dispatch:
+
+jobs:
+  k8s-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: e2e-cluster
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Build and load Docker images
+        run: |
+          docker build -t todo-api:latest ./todo-api
+          docker build -t todo-app:latest ./todo-app
+          kind load docker-image todo-api:latest todo-app:latest --name e2e-cluster
+
+      - name: Run K8s E2E tests
+        run: ./scripts/k8s-e2e.sh
